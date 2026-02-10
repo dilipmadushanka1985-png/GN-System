@@ -56,8 +56,14 @@ with st.form("member_form", clear_on_submit=True):
         job = st.text_input("රැකියාව / වෘත්තිය")
         vehicle_id = st.text_input("වාහන අංකය (optional)")
 
+    # මෙතන date range එක දාලා තියෙනවා
     gender = st.radio("ලිංගභාවය", ["පිරිමි", "ගැහැණු", "වෙනත්"], horizontal=True)
-    dob = st.date_input("උපන් දිනය", value=None)
+    dob = st.date_input(
+        "උපන් දිනය",
+        value=None,
+        min_value=date(1920, 1, 1),
+        max_value=date(2050, 12, 31)
+    )
     phone = st.text_input("දුරකථන අංකය (optional)")
 
     submitted = st.form_submit_button("එකතු කරන්න", use_container_width=True)
@@ -98,3 +104,4 @@ if st.button("අවසන් ඇතුලත් කිරීම් 5 බලන�
             st.info("තවම කිසිම දත්ත ඇතුලත් වෙලා නැහැ.")
     except Exception as e:
         st.error(f"දත්ත බැලීමේදී ගැටලුවක්: {e}")
+
