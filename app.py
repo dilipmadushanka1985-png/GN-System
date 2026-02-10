@@ -29,7 +29,7 @@ if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
     password = st.text_input("Password ඇතුලත් කරන්න", type="password")
     if st.button("Login"):
-        if password == "gnnegombo2025":  # මෙතන ඔයාගේ password එක change කරගන්න
+        if password == "Delta@Madu":  # මෙතන ඔයාගේ password එක change කරගන්න
             st.session_state.logged_in = True
             st.rerun()
         else:
@@ -106,3 +106,4 @@ if st.button("අවසන් ඇතුලත් කිරීම් 5 බලන�
             st.info("තවම කිසිම දත්ත ඇතුලත් වෙලා නැහැ.")
     except Exception as e:
         st.error(f"දත්ත බැලීමේදී ගැටලුවක්: {e}")
+
