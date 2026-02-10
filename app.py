@@ -203,25 +203,25 @@ if st.button("Load කරන්න"):
             row_data = match.iloc[0]
             row_index = match.index[0] + 2  # Sheet row index (headers = 1)
             st.write("සංස්කරණයට දත්ත load වුණා:")
-            
+
             with st.form("edit_form"):
                 household_id_edit = st.text_input("පවුල් අංකය", value=row_data['පවුල් අංකය'])
                 nic_edit = st.text_input("NIC අංකය", value=row_data['NIC අංකය'], disabled=True)
                 name_edit = st.text_input("නම", value=row_data['නම'])
-                role_edit = st.selectbox("භූමිකාව", options=["පවුලේ ප්‍රධානි", "බිරිඳ", "ස්වාමිපුරුෂයා", "දරුවා", "මව", "පියා", "සහෝදරයා", "සහෝදරිය", "වෙනත්"], index=["පවුලේ ප්‍රධානි", "බිරිඳ", "ස්වාමිපුරුෂයා", "දරුවා", "මව", "පියා", "සහෝදරයා", "සහෝදරිය", "වෙනත්"].index(row_data['භූමිකාව']))
+                role_edit = st.selectbox("භූමිකාව", options=["පවුලේ ප්‍රධානි", "බිරිඳ", "ස්වාමිපුරුෂයා", "දරුවා", "මව", "පියා", "සහෝදරයා", "සහෝදරිය", "වෙනත්"], index=["පවුලේ ප්‍රධානි", "බිරිඳ", "ස්වාමිපුරුෂයා", "දරුවා", "මව", "පියා", "සහෝදරයා", "සහෝදරිය", "වෙනත්"].index(row_data['භූමිකාව']) if row_data['භූමිකාව'] in ["පවුලේ ප්‍රධානි", "බිරිඳ", "ස්වාමිපුරුෂයා", "දරුවා", "මව", "පියා", "සහෝදරයා", "සහෝදරිය", "වෙනත්"] else 0)
                 job_edit = st.text_input("රැකියාව", value=row_data['රැකියාව'])
                 vehicle1_edit = st.text_input("වාහන අංකය 1", value=row_data['වාහන අංකය 1'])
                 vehicle2_edit = st.text_input("වාහන අංකය 2", value=row_data['වාහන අංකය 2'])
-                gender_edit = st.radio("ලිංගභාවය", options=["පිරිමි", "ගැහැණු", "වෙනත්"], index=["පිරිමි", "ගැහැණු", "වෙනත්"].index(row_data['ලිංගභාවය']))
+                gender_edit = st.radio("ලිංගභාවය", options=["පිරිමි", "ගැහැණු", "වෙනත්"], index=["පිරිමි", "ගැහැණු", "වෙනත්"].index(row_data['ලිංගභාවය']) if row_data['ලිංගභාවය'] in ["පිරිමි", "ගැහැණු", "වෙනත්"] else 0)
                 dob_edit = st.date_input("උපන් දිනය", value=date.fromisoformat(row_data['උපන් දිනය']) if row_data['උපන් දිනය'] else None, min_value=date(1920, 1, 1), max_value=date(2050, 12, 31))
                 address_edit = st.text_input("ලිපිනය", value=row_data['ලිපිනය'])
                 education_edit = st.text_input("අධ්‍යාපන සුදුසුකම්", value=row_data['අධ්‍යාපන සුදුසුකම්'])
                 email_edit = st.text_input("විද්‍යුත් ලිපිනය", value=row_data['විද්‍යුත් ලිපිනය'])
                 home_phone_edit = st.text_input("දුරකථන අංකය (නිවස)", value=row_data['දුරකථන අංකය (නිවස)'])
                 mobile_phone_edit = st.text_input("දුරකථන අංකය (ජංගම)", value=row_data['දුරකථන අංකය (ජංගම)'])
-                ethnicity_edit = st.selectbox("ජාතිය", options=["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"], index=["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"].index(row_data['ජාතිය']))
+                ethnicity_edit = st.selectbox("ජාතිය", options=["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"], index=["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"].index(row_data['ජාතිය']) if row_data['ජාතිය'] in ["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"] else 0)
                 monthly_income_edit = st.number_input("මාසික ආදායම", value=float(row_data['මාසික ආදායම']) if row_data['මාසික ආදායම'] else 0.0, min_value=0.0, step=1000.0)
-                
+
                 if st.form_submit_button("Update කරන්න"):
                     updated_row = [
                         household_id_edit,
@@ -245,5 +245,6 @@ if st.button("Load කරන්න"):
                     worksheet.update(f'A{row_index}:Q{row_index}', [updated_row])
                     st.success("සංස්කරණය සාර්ථකයි!")
                     st.rerun()  # Refresh data
-            else:
-                st.error("NIC නැහැ.")
+        else:
+            st.error("NIC නැහැ.")
+
