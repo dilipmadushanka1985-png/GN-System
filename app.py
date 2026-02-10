@@ -1,95 +1,89 @@
 import streamlit as st
-import pandas as pd
-from streamlit_gsheets import GSheetsConnection
+import gspread
+from google.oauth2.service_account import Credentials
+import json
+import os
+from datetime import datetime
 
-# Page Configuration
-st.set_page_config(page_title="GN Data System", layout="wide")
-st.title("🏡 ග්‍රාම නිලධාරී - පවුල් දත්ත පද්ධතිය")
+# --- Google Sheets Setup (secrets or local file) ---
+if "GOOGLE_CREDENTIALS" in os.environ:
+    creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+else:
+    creds_info = json.load(open("credentials.json"))  # local dev
 
-# 1. Google Sheets Connection
-# ---------------------------------------------------------
-conn = st.connection("gsheets", type=GSheetsConnection)
+scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+client = gspread.authorize(creds)
 
-# දත්ත කියවීම (Read Data)
-try:
-    # ttl=5 මගින් දත්ත ඉක්මනින් refresh වේ
-    existing_data = conn.read(ttl=5)
+SHEET_ID = "YOUR_GOOGLE_SHEET_ID_HERE"  # Sheet URL එකෙන් ID එක copy කරගන්න[](https://docs.google.com/spreadsheets/d/SHEET_ID/edit)
+sheet = client.open_by_key(SHEET_ID).sheet1  # or .worksheet("GN_Database")
+
+# --- Simple login for security (GN use කරන්න) ---
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    st.title("GN Data Entry - Login")
+    password = st.text_input("Password ඇතුලත් කරන්න", type="password")
+    if st.button("Login"):
+        if password == "gn123negombo":  # ඔයාට ඕන password එකක් දාන්න (later change කරන්න)
+            st.session_state.logged_in = True
+            st.rerun()
+        else:
+            st.error("වැරදි password!")
+    st.stop()
+
+# --- Main App ---
+st.title("ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම (GN Data Entry)")
+st.subheader("නව පවුල් සාමාජිකයෙකු එකතු කරන්න")
+
+with st.form("household_member_form", clear_on_submit=True):
+    col1, col2 = st.columns(2)
+    with col1:
+        household_id = st.text_input("පවුල් අංකය (Household_ID)", placeholder="GN-001-2025")
+        nic = st.text_input("ජාතික හැඳුනුම්පත් අංකය (NIC)")
+        name = st.text_input("සම්පූර්ණ නම")
     
-    # හිස් පේළි අයින් කිරීම සහ දත්ත නැත්නම් DataFrame එකක් සෑදීම
-    if existing_data.empty:
-        existing_data = pd.DataFrame(columns=["Household_ID", "NIC", "Name", "Role", "Job", "Vehicle"])
-except Exception as e:
-    st.error(f"Google Sheet සම්බන්ධ දෝෂයක්: {e}")
-    existing_data = pd.DataFrame(columns=["Household_ID", "NIC", "Name", "Role", "Job", "Vehicle"])
+    with col2:
+        role = st.selectbox("භූමිකාව (Role)", ["පවුලේ ප්‍රධානි", "බිරිඳ/ස්වාමිපුරුෂයා", "දරුවා", "මව/පියා", "සහෝදරයා/සහෝදරිය", "වෙනත්"])
+        job = st.text_input("රැකියාව / වෘත්තිය (Job)")
+        vehicle_id = st.text_input("වාහන අංකය (Vehicle_ID, optional)")
 
-# 2. Data Entry Form
-# ---------------------------------------------------------
-with st.expander("➕ අලුත් සාමාජිකයෙක් හෝ පවුලක් ඇතුලත් කරන්න", expanded=False):
-    with st.form("entry_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            h_id = st.text_input("🏠 ගෘහ මූලික අංකය (Household ID)")
-            nic = st.text_input("🆔 NIC අංකය")
-            name = st.text_input("👤 සම්පූර්ණ නම")
-        
-        with col2:
-            role = st.selectbox("🔗 ගෘහ මූලිකයාට ඇති නෑකම", ["ගෘහ මූලිකයා", "බිරිඳ/සැමියා", "දරුවා", "දෙමාපියන්", "වෙනත්"])
-            job = st.text_input("💼 රැකියාව")
-            vehicle = st.text_input("🚗 වාහන විස්තර (නැත්නම් 'නැත')")
+    # Extra fields (ඔයාට ඕන නම් add කරන්න)
+    gender = st.radio("ලිංගභාවය", ["පිරිමි", "ගැහැණු", "වෙනත්"])
+    dob = st.date_input("උපන් දිනය (Date of Birth)", value=None)
+    phone = st.text_input("දුරකථන අංකය")
 
-        submitted = st.form_submit_button("දත්ත සුරකින්න (Save to Sheet)")
+    submitted = st.form_submit_button("පවුල් සාමාජිකයා එකතු කරන්න")
 
-        if submitted:
-            if h_id and nic and name:
-                # අලුත් පේළිය හදාගැනීම
-                new_data = {
-                    "Household_ID": h_id, 
-                    "NIC": nic, 
-                    "Name": name, 
-                    "Role": role, 
-                    "Job": job, 
-                    "Vehicle": vehicle
-                }
-                new_row = pd.DataFrame([new_data])
-                
-                # පරණ ඩේටා වලට අලුත් එක එකතු කිරීම
-                updated_df = pd.concat([existing_data, new_row], ignore_index=True)
-                
-                # Google Sheet එක Update කිරීම
-                conn.update(data=updated_df)
-                
-                st.success(f"✅ {name} ගේ විස්තර සාර්ථකව Google Sheet එකට ඇතුලත් කරන ලදී!")
-                st.rerun() # Refresh to show new data (Updated from experimental_rerun)
-            else:
-                st.error("⚠️ කරුණාකර ගෘහ අංකය, NIC සහ නම අනිවාර්යයෙන් ඇතුලත් කරන්න.")
+if submitted:
+    if not household_id or not nic or not name:
+        st.error("පවුල් අංකය, NIC සහ නම අනිවාර්යයි!")
+    else:
+        try:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            row = [
+                household_id,
+                nic,
+                name,
+                role,
+                job,
+                vehicle_id,
+                gender,
+                str(dob) if dob else "",
+                phone,
+                timestamp
+            ]
+            sheet.append_row(row)
+            st.success(f"සාර්ථකයි! {name} එකතු වුණා ✓ (Household: {household_id})")
+        except Exception as e:
+            st.error(f"දත්ත එකතු කිරීමේදී ගැටලුවක්: {str(e)}")
 
-# 3. Search & View Data
-# ---------------------------------------------------------
-st.divider()
-st.subheader("🔍 පවුලේ විස්තර සොයන්න (From Google Sheet)")
-
-col_search, col_display = st.columns([1, 2])
-
-with col_search:
-    search_hid = st.text_input("සොයන්න අවශ්‍ය ගෘහ අංකය:")
-    search_nic = st.text_input("හෝ NIC අංකය:")
-
-with col_display:
-    results = pd.DataFrame()
-    
-    if search_hid:
-        # Data type ප්‍රශ්න මගහරවා ගැනීමට astype(str) භාවිතා කරයි
-        results = existing_data[existing_data['Household_ID'].astype(str) == search_hid]
-    elif search_nic:
-        person = existing_data[existing_data['NIC'].astype(str) == search_nic]
-        if not person.empty:
-            found_hid = person.iloc[0]['Household_ID']
-            results = existing_data[existing_data['Household_ID'] == found_hid]
-            st.info(f"මෙම පුද්ගලයා අයත් වන ගෘහ අංකය: {found_hid}")
-
-    if not results.empty:
-        st.success(f"සාමාජිකයින් ගණන: {len(results)}")
-        st.dataframe(results, use_container_width=True)
-    elif (search_hid or search_nic):
-        st.warning("❌ දත්ත හමු නොවිණි.")
+# Optional: View recent data
+if st.button("අවසන් ඇතුලත් කිරීම් 10 බලන්න"):
+    data = sheet.get_all_values()
+    if len(data) > 1:
+        recent = data[-10:]  # last 10 rows
+        st.table(recent)
+    else:
+        st.info("තවම data නැහැ.")
