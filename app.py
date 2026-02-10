@@ -30,7 +30,7 @@ if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
     password = st.text_input("Password ඇතුලත් කරන්න", type="password")
     if st.button("Login"):
-        if password == "gnnegombo2025":  # මෙතන ඔයාට ඕන password එක දාන්න
+        if password == "gnnegombo2025":
             st.session_state.logged_in = True
             st.rerun()
         else:
@@ -49,13 +49,9 @@ def load_data():
         headers = data[0]
         df = pd.DataFrame(data[1:], columns=headers)
         
-        # උපන් දිනය convert කරලා NaT handle කරන්න
         df['උපන් දිනය'] = pd.to_datetime(df['උපන් දිනය'], errors='coerce')
-        
-        # Age calculate කරලා float විදිහට තබාගන්න (NaN තියෙන ඒවා auto NaN වෙනවා)
         df['Age'] = (datetime.now() - df['උපන් දිනය']).dt.days / 365.25
         
-        # මාසික ආදායම column එක තියෙනවා නම් විතරක් convert කරන්න
         if 'මාසික ආදායම' in df.columns:
             df['මාසික ආදායම'] = pd.to_numeric(df['මාසික ආදායම'], errors='coerce')
         else:
@@ -166,11 +162,10 @@ if submitted:
                 timestamp
             ]
             worksheet.append_row(new_row)
-            st.success(f"සාර්ථකයි! {name} එකතු වුණා ✓ (පවුල් අංකය: {household_id})")
+            st.success(f"සාර්ථකයි! {name} එකතු වුණා ✓")
             st.balloons()
         except Exception as e:
             st.error(f"දත්ත එකතු කිරීමේදී ගැටලුවක්: {str(e)}")
-            st.info("Service account එක sheet එකට Editor permission තියෙනවද බලන්න.")
 
 # ------------------ Search Feature ------------------
 st.subheader("දත්ත සෙවීම")
@@ -211,10 +206,11 @@ if st.button("Load කරන්න"):
         match = df[df['NIC අංකය'] == edit_nic]
         if not match.empty:
             row_data = match.iloc[0]
-            row_index = match.index[0] + 2  # Sheet row index (headers = 1)
+            row_index = match.index[0] + 2
+            
             st.write("සංස්කරණයට දත්ත load වුණා:")
             
-            with st.form("edit_form"):
+            with st.form("edit_form", clear_on_submit=True):
                 household_id_edit = st.text_input("පවුල් අංකය", value=row_data['පවුල් අංකය'])
                 nic_edit = st.text_input("NIC අංකය", value=row_data['NIC අංකය'], disabled=True)
                 name_edit = st.text_input("නම", value=row_data['නම'])
@@ -222,8 +218,18 @@ if st.button("Load කරන්න"):
                 job_edit = st.text_input("රැකියාව", value=row_data['රැකියාව'])
                 vehicle1_edit = st.text_input("වාහන අංකය 1", value=row_data['වාහන අංකය 1'])
                 vehicle2_edit = st.text_input("වාහන අංකය 2", value=row_data['වාහන අංකය 2'])
-                gender_edit = st.radio("ලිංගභාවය", options=["පිරිමි", "ගැහැණු", "වෙනත්"], index=["පිරිමි", "ගැහැණු", "වෙනත්"].index(row_data['ලිංගභාවය']) if row_data['ලිංගභාවය'] in ["පිරිමි", "ගැහැණු", "වෙනත්"] else 0)
-                dob_edit = st.date_input("උපන් දිනය", value=date.fromisoformat(row_data['උපන් දිනය']) if row_data['උපන් දිනය'] else None, min_value=date(1920, 1, 1), max_value=date(2050, 12, 31))
+                gender_edit = st.radio("ලිංගභාවය", options=["පිරිමි", "ගැහැණු", "වෙනත්"], horizontal=True, index=["පිරිමි", "ගැහැණු", "වෙනත්"].index(row_data['ලිංගභාවය']) if row_data['ලිංගභාවය'] in ["පිරිමි", "ගැහැණු", "වෙනත්"] else 0)
+                
+                # DOB safe handling
+                dob_value = None
+                if row_data['උපන් දිනය'] and pd.notna(row_data['උපන් දිනය']):
+                    try:
+                        dob_value = date.fromisoformat(row_data['උපන් දිනය'])
+                    except ValueError:
+                        dob_value = None
+                
+                dob_edit = st.date_input("උපන් දිනය", value=dob_value, min_value=date(1920, 1, 1), max_value=date(2050, 12, 31))
+                
                 address_edit = st.text_input("ලිපිනය", value=row_data['ලිපිනය'])
                 education_edit = st.text_input("අධ්‍යාපන සුදුසුකම්", value=row_data['අධ්‍යාපන සුදුසුකම්'])
                 email_edit = st.text_input("විද්‍යුත් ලිපිනය", value=row_data['විද්‍යුත් ලිපිනය'])
@@ -254,6 +260,6 @@ if st.button("Load කරන්න"):
                     ]
                     worksheet.update(f'A{row_index}:Q{row_index}', [updated_row])
                     st.success("සංස්කරණය සාර්ථකයි!")
-                    st.rerun()  # Refresh data
+                    st.rerun()
         else:
-            st.error("NIC නැහැ.")
+            st.error("NIC අංකය නැහැ.")
