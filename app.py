@@ -30,7 +30,7 @@ if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
     password = st.text_input("Password ඇතුලත් කරන්න", type="password")
     if st.button("Login"):
-        if password == "gnnegombo2025":  # Change this to your password
+        if password == "gnnegombo2025":  # මෙතන ඔයාගේ password එක change කරගන්න
             st.session_state.logged_in = True
             st.rerun()
         else:
@@ -48,8 +48,16 @@ def load_data():
     if len(data) > 0:
         headers = data[0]
         df = pd.DataFrame(data[1:], columns=headers)
+        
+        # උපන් දිනය convert කරලා NaT handle කරන්න
         df['උපන් දිනය'] = pd.to_datetime(df['උපන් දිනය'], errors='coerce')
-        df['Age'] = ((datetime.now() - df['උපන් දිනය']).dt.days / 365.25).astype('Int64')
+        
+        # Age calculate කරලා float විදිහට තබාගන්න (NaN තියෙන ඒවා auto NaN වෙනවා)
+        df['Age'] = (datetime.now() - df['උපන් දිනය']).dt.days / 365.25
+        
+        # Int64Dtype() use කරලා NaN handle කරලා int වලට convert කරන්න
+        df['Age'] = df['Age'].astype(pd.Int64Dtype())
+        
         df['මාසික ආදායම'] = pd.to_numeric(df['මාසික ආදායම'], errors='coerce')
         return df
     return pd.DataFrame()
@@ -61,10 +69,10 @@ if not df.empty:
     total_members = len(df)
     
     age_groups = {
-        '0-18': len(df[(df['Age'] >= 0) & (df['Age'] <= 18)]),
-        '19-35': len(df[(df['Age'] > 18) & (df['Age'] <= 35)]),
-        '36-60': len(df[(df['Age'] > 35) & (df['Age'] <= 60)]),
-        '60+': len(df[df['Age'] > 60])
+        '0-18': len(df[(df['Age'].notnull()) & (df['Age'] >= 0) & (df['Age'] <= 18)]),
+        '19-35': len(df[(df['Age'].notnull()) & (df['Age'] > 18) & (df['Age'] <= 35)]),
+        '36-60': len(df[(df['Age'].notnull()) & (df['Age'] > 35) & (df['Age'] <= 60)]),
+        '60+': len(df[(df['Age'].notnull()) & (df['Age'] > 60)])
     }
     
     st.subheader("Dashboard")
@@ -203,7 +211,7 @@ if st.button("Load කරන්න"):
             row_data = match.iloc[0]
             row_index = match.index[0] + 2  # Sheet row index (headers = 1)
             st.write("සංස්කරණයට දත්ත load වුණා:")
-
+            
             with st.form("edit_form"):
                 household_id_edit = st.text_input("පවුල් අංකය", value=row_data['පවුල් අංකය'])
                 nic_edit = st.text_input("NIC අංකය", value=row_data['NIC අංකය'], disabled=True)
@@ -220,7 +228,7 @@ if st.button("Load කරන්න"):
                 home_phone_edit = st.text_input("දුරකථන අංකය (නිවස)", value=row_data['දුරකථන අංකය (නිවස)'])
                 mobile_phone_edit = st.text_input("දුරකථන අංකය (ජංගම)", value=row_data['දුරකථන අංකය (ජංගම)'])
                 ethnicity_edit = st.selectbox("ජාතිය", options=["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"], index=["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"].index(row_data['ජාතිය']) if row_data['ජාතිය'] in ["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"] else 0)
-                monthly_income_edit = st.number_input("මාසික ආදායම", value=float(row_data['මාසික ආදායම']) if row_data['මාසික ආදායම'] else 0.0, min_value=0.0, step=1000.0)
+                monthly_income_edit = st.number_input("මාසික ආදායම", value=float(row_data['මාසික ආදායම']) if pd.notnull(row_data['මාසික ආදායම']) else 0.0, min_value=0.0, step=1000.0)
 
                 if st.form_submit_button("Update කරන්න"):
                     updated_row = [
@@ -247,4 +255,3 @@ if st.button("Load කරන්න"):
                     st.rerun()  # Refresh data
         else:
             st.error("NIC නැහැ.")
-
