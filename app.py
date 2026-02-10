@@ -1,7 +1,7 @@
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import datetime
+from datetime import datetime, date
 
 # ------------------ Google Sheets Connection ------------------
 @st.cache_resource
@@ -29,7 +29,7 @@ if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
     password = st.text_input("Password ඇතුලත් කරන්න", type="password")
     if st.button("Login"):
-        if password == "gnnegombo2025":  # මෙතන ඔයාට ඕන password එක දාන්න (production එකට change කරන්න)
+        if password == "gnnegombo2025":  # මෙතන ඔයාගේ password එක change කරගන්න
             st.session_state.logged_in = True
             st.rerun()
         else:
@@ -56,14 +56,16 @@ with st.form("member_form", clear_on_submit=True):
         job = st.text_input("රැකියාව / වෘත්තිය")
         vehicle_id = st.text_input("වාහන අංකය (optional)")
 
-    # මෙතන date range එක දාලා තියෙනවා
     gender = st.radio("ලිංගභාවය", ["පිරිමි", "ගැහැණු", "වෙනත්"], horizontal=True)
+    
+    # Birthday range: 1920 - 2050
     dob = st.date_input(
         "උපන් දිනය",
         value=None,
         min_value=date(1920, 1, 1),
         max_value=date(2050, 12, 31)
     )
+    
     phone = st.text_input("දුරකථන අංකය (optional)")
 
     submitted = st.form_submit_button("එකතු කරන්න", use_container_width=True)
@@ -104,4 +106,3 @@ if st.button("අවසන් ඇතුලත් කිරීම් 5 බලන�
             st.info("තවම කිසිම දත්ත ඇතුලත් වෙලා නැහැ.")
     except Exception as e:
         st.error(f"දත්ත බැලීමේදී ගැටලුවක්: {e}")
-
