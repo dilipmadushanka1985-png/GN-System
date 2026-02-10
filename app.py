@@ -1,29 +1,25 @@
 import streamlit as st
-import gspread
-from google.oauth2.service_account import Credentials
 import json
-import os
+from google.oauth2.service_account import Credentials
+import gspread
 from datetime import datetime
 
-# ------------------ Google Sheets Connection (cached) ------------------
 @st.cache_resource
 def get_sheet():
-    # Streamlit Cloud secrets වල GOOGLE_CREDENTIALS key එක තියෙන්න ඕන (full JSON string)
-    if "GOOGLE_CREDENTIALS" in os.environ:
-        creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS"])
-    else:
-        # Local testing වලදි credentials.json file එක use කරන්න (gitignore කරලා තියන්න!)
-        try:
-            with open("credentials.json", "r") as f:
-                creds_dict = json.load(f)
-        except FileNotFoundError:
-            st.error("Local credentials.json file නැහැ. Streamlit Cloud වලදි secrets දාලා තියෙනවද බලන්න.")
-            st.stop()
-
+    # Streamlit secrets වලින් TOML dictionary එක ගන්න
+    creds_dict = dict(st.secrets["GOOGLE_CREDENTIALS"])
+    
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    client = gspread.authorize(creds)
+    
+    SHEET_ID = "1itCCxoIfEWWroY5c3ukjLho9B1V0QM6WwR-6Z2rMORE"
+    return client.open_by_key(SHEET_ID).sheet1
+
+worksheet = get_sheet()
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(creds)
     
@@ -112,3 +108,4 @@ if st.button("අවසන් ඇතුලත් කිරීම් 5 බලන�
             st.info("තවම කිසිම data ඇතුලත් වෙලා නැහැ.")
     except Exception as e:
         st.error(f"Data බැලීමේදී error: {e}")
+
