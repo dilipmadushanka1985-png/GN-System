@@ -30,7 +30,7 @@ if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
     password = st.text_input("Password ඇතුලත් කරන්න", type="password")
     if st.button("Login"):
-        if password == "gnnegombo2025":  # මෙතන ඔයාගේ password එක change කරගන්න
+        if password == "gnnegombo2025":  # Change this to your secure password
             st.session_state.logged_in = True
             st.rerun()
         else:
@@ -55,10 +55,9 @@ def load_data():
         # Age calculate කරලා float විදිහට තබාගන්න (NaN තියෙන ඒවා auto NaN වෙනවා)
         df['Age'] = (datetime.now() - df['උපන් දිනය']).dt.days / 365.25
         
-        # Int64Dtype() use කරලා NaN handle කරලා int වලට convert කරන්න
-        df['Age'] = df['Age'].astype(pd.Int64Dtype())
-        
+        # මාසික ආදායම numeric කරන්න
         df['මාසික ආදායම'] = pd.to_numeric(df['මාසික ආදායම'], errors='coerce')
+        
         return df
     return pd.DataFrame()
 
@@ -68,6 +67,7 @@ if not df.empty:
     total_families = df['පවුල් අංකය'].nunique()
     total_members = len(df)
     
+    # Age groups එක NaN skip කරලා calculate කරන්න
     age_groups = {
         '0-18': len(df[(df['Age'].notnull()) & (df['Age'] >= 0) & (df['Age'] <= 18)]),
         '19-35': len(df[(df['Age'].notnull()) & (df['Age'] > 18) & (df['Age'] <= 35)]),
