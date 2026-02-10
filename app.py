@@ -5,85 +5,110 @@ import json
 import os
 from datetime import datetime
 
-# --- Google Sheets Setup (secrets or local file) ---
-if "GOOGLE_CREDENTIALS" in os.environ:
-    creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
-else:
-    creds_info = json.load(open("credentials.json"))  # local dev
+# ------------------ Google Sheets Connection (cached) ------------------
+@st.cache_resource
+def get_sheet():
+    # Streamlit Cloud secrets වල GOOGLE_CREDENTIALS key එක තියෙන්න ඕන (full JSON string)
+    if "GOOGLE_CREDENTIALS" in os.environ:
+        creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+    else:
+        # Local testing වලදි credentials.json file එක use කරන්න (gitignore කරලා තියන්න!)
+        try:
+            with open("credentials.json", "r") as f:
+                creds_dict = json.load(f)
+        except FileNotFoundError:
+            st.error("Local credentials.json file නැහැ. Streamlit Cloud වලදි secrets දාලා තියෙනවද බලන්න.")
+            st.stop()
 
-scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
-client = gspread.authorize(creds)
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    client = gspread.authorize(creds)
+    
+    # ඔයාගේ Sheet ID එක මෙතන දාලා තියෙනවා
+    SHEET_ID = "1itCCxoIfEWWroY5c3ukjLho9B1V0QM6WwR-6Z2rMORE"
+    sheet = client.open_by_key(SHEET_ID).sheet1  # sheet1 = first tab (gid=0)
+    
+    return sheet
 
-SHEET_ID = "YOUR_GOOGLE_SHEET_ID_HERE"  # Sheet URL එකෙන් ID එක copy කරගන්න[](https://docs.google.com/spreadsheets/d/SHEET_ID/edit)
-sheet = client.open_by_key(SHEET_ID).sheet1  # or .worksheet("GN_Database")
+worksheet = get_sheet()
 
-# --- Simple login for security (GN use කරන්න) ---
+# ------------------ Simple Login (GN use කරන්න) ------------------
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
-    st.title("GN Data Entry - Login")
+    st.title("GN Data Entry System - Login")
     password = st.text_input("Password ඇතුලත් කරන්න", type="password")
     if st.button("Login"):
-        if password == "gn123negombo":  # ඔයාට ඕන password එකක් දාන්න (later change කරන්න)
+        if password == "gnnegombo2025":  # ඔයාට ඕන password එක change කරන්න!
             st.session_state.logged_in = True
             st.rerun()
         else:
-            st.error("වැරදි password!")
+            st.error("වැරදි password! නැවත උත්සාහ කරන්න.")
     st.stop()
 
-# --- Main App ---
-st.title("ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම (GN Data Entry)")
+# ------------------ Main Data Entry Form ------------------
+st.title("ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම")
 st.subheader("නව පවුල් සාමාජිකයෙකු එකතු කරන්න")
 
-with st.form("household_member_form", clear_on_submit=True):
+with st.form("member_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
+    
     with col1:
         household_id = st.text_input("පවුල් අංකය (Household_ID)", placeholder="GN-001-2025")
-        nic = st.text_input("ජාතික හැඳුනුම්පත් අංකය (NIC)")
+        nic = st.text_input("NIC අංකය")
         name = st.text_input("සම්පූර්ණ නම")
     
     with col2:
-        role = st.selectbox("භූමිකාව (Role)", ["පවුලේ ප්‍රධානි", "බිරිඳ/ස්වාමිපුරුෂයා", "දරුවා", "මව/පියා", "සහෝදරයා/සහෝදරිය", "වෙනත්"])
-        job = st.text_input("රැකියාව / වෘත්තිය (Job)")
-        vehicle_id = st.text_input("වාහන අංකය (Vehicle_ID, optional)")
+        role = st.selectbox("භූමිකාව (Role)", ["පවුලේ ප්‍රධානි", "බිරිඳ", "ස්වාමිපුරුෂයා", "දරුවා", "මව", "පියා", "සහෝදරයා", "සහෝදරිය", "වෙනත්"])
+        job = st.text_input("රැකියාව / වෘත්තිය")
+        vehicle_id = st.text_input("වාහන අංකය (optional)")
 
-    # Extra fields (ඔයාට ඕන නම් add කරන්න)
-    gender = st.radio("ලිංගභාවය", ["පිරිමි", "ගැහැණු", "වෙනත්"])
-    dob = st.date_input("උපන් දිනය (Date of Birth)", value=None)
-    phone = st.text_input("දුරකථන අංකය")
+    # Extra fields (ඔයාගේ sheet එකට columns add කරලා තියෙනවා නම් මේවාත් append කරන්න)
+    gender = st.radio("ලිංගභාවය", ["පිරිමි", "ගැහැණු", "වෙනත්"], horizontal=True)
+    dob = st.date_input("උපන් දිනය", value=None)
+    phone = st.text_input("දුරකථන අංකය (optional)")
 
-    submitted = st.form_submit_button("පවුල් සාමාජිකයා එකතු කරන්න")
+    submitted = st.form_submit_button("එකතු කරන්න", use_container_width=True)
 
 if submitted:
     if not household_id or not nic or not name:
-        st.error("පවුල් අංකය, NIC සහ නම අනිවාර්යයි!")
+        st.error("පවුල් අංකය, NIC සහ නම **අනිවාර්යයි**!")
     else:
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            row = [
-                household_id,
-                nic,
-                name,
+            new_row = [
+                household_id.strip(),
+                nic.strip(),
+                name.strip(),
                 role,
-                job,
-                vehicle_id,
+                job.strip() if job else "",
+                vehicle_id.strip() if vehicle_id else "",
                 gender,
                 str(dob) if dob else "",
-                phone,
+                phone.strip() if phone else "",
                 timestamp
             ]
-            sheet.append_row(row)
-            st.success(f"සාර්ථකයි! {name} එකතු වුණා ✓ (Household: {household_id})")
+            worksheet.append_row(new_row)
+            st.success(f"සාර්ථකයි! **{name}** එකතු වුණා ✓ (පවුල් අංකය: {household_id})")
+            st.balloons()  # fun effect :)
+        except gspread.exceptions.APIError as api_err:
+            st.error(f"Google Sheets API ගැටලුවක්: {api_err}")
+            st.info("Service account එක sheet එකට Editor permission තියෙනවද බලන්න.")
         except Exception as e:
-            st.error(f"දත්ත එකතු කිරීමේදී ගැටලුවක්: {str(e)}")
+            st.error(f"අනපේක්ෂිත error එකක්: {str(e)}")
 
-# Optional: View recent data
-if st.button("අවසන් ඇතුලත් කිරීම් 10 බලන්න"):
-    data = sheet.get_all_values()
-    if len(data) > 1:
-        recent = data[-10:]  # last 10 rows
-        st.table(recent)
-    else:
-        st.info("තවම data නැහැ.")
+# Optional: Recent entries බලන්න button
+if st.button("අවසන් ඇතුලත් කිරීම් 5 බලන්න"):
+    try:
+        all_data = worksheet.get_all_values()
+        if len(all_data) > 1:
+            recent_rows = all_data[-5:]  # last 5 rows
+            st.table(recent_rows)
+        else:
+            st.info("තවම කිසිම data ඇතුලත් වෙලා නැහැ.")
+    except Exception as e:
+        st.error(f"Data බැලීමේදී error: {e}")
