@@ -24,7 +24,7 @@ if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
     password = st.text_input("Password ඇතුලත් කරන්න", type="password", key="login_password")
     if st.button("Login"):
-        if password == "gnnegombo2025":  # මෙතන ඔයාගේ password එක දාන්න
+        if password == "gnnegombo2025":
             st.session_state.logged_in = True
             st.success("Login සාර්ථකයි!")
             st.rerun()
@@ -168,7 +168,7 @@ if st.button("Load කරන්න"):
         match = df[df['NIC අංකය'] == edit_nic]
         if not match.empty:
             row_data = match.iloc[0]
-            row_index = match.index[0] + 2  # Row index (1-based + headers)
+            row_index = match.index[0] + 2
 
             st.write(f"සංස්කරණයට දත්ත load වුණා (Row {row_index}):")
 
@@ -200,28 +200,30 @@ if st.button("Load කරන්න"):
                 monthly_income_edit = st.number_input("මාසික ආදායම", value=float(row_data.get('මාසික ආදායම', 0)) if pd.notnull(row_data.get('මාසික ආදායම', 0)) else 0.0, min_value=0.0, step=1000.0)
 
                 if st.form_submit_button("Update කරන්න"):
-                    updated_row = [
-                        [household_id_edit or ''],
-                        [nic_edit or ''],
-                        [name_edit or ''],
-                        [role_edit or ''],
-                        [job_edit or ''],
-                        [vehicle1_edit or ''],
-                        [vehicle2_edit or ''],
-                        [gender_edit or ''],
-                        [str(dob_edit) if dob_edit else ''],
-                        [address_edit or ''],
-                        [education_edit or ''],
-                        [email_edit or ''],
-                        [home_phone_edit or ''],
-                        [mobile_phone_edit or ''],
-                        [ethnicity_edit or ''],
-                        [str(monthly_income_edit) or ''],
-                        [datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
-                    ]
-                    # Update කරනකොට values එක list of lists විදිහට දෙන්න
-                    worksheet.update(range_name=f'A{row_index}:Q{row_index}', values=updated_row)
-                    st.success(f"සංස්කරණය සාර්ථකයි! Row {row_index} update වුණා.")
-                    st.rerun()
+                    updated_row = [[
+                        household_id_edit or '',
+                        nic_edit or '',
+                        name_edit or '',
+                        role_edit or '',
+                        job_edit or '',
+                        vehicle1_edit or '',
+                        vehicle2_edit or '',
+                        gender_edit or '',
+                        str(dob_edit) if dob_edit else '',
+                        address_edit or '',
+                        education_edit or '',
+                        email_edit or '',
+                        home_phone_edit or '',
+                        mobile_phone_edit or '',
+                        ethnicity_edit or '',
+                        str(monthly_income_edit) or '',
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    ]]
+                    try:
+                        worksheet.update(range_name=f'A{row_index}:Q{row_index}', values=updated_row)
+                        st.success(f"සංස්කරණය සාර්ථකයි! Row {row_index} update වුණා.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Update කිරීමේදී ගැටලුවක්: {str(e)}")
         else:
             st.error("මේ NIC අංකය sheet එකේ නැහැ.")
