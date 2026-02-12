@@ -16,11 +16,10 @@ def get_sheet():
 
 worksheet = get_sheet()
 
-# ------------------ Persistent Login (refresh වුණත් logout නොවෙන්න) ------------------
+# ------------------ Persistent Login ------------------
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
-# Login check කරන්නේ session state එකෙන් විතරයි
 if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
     password = st.text_input("Password ඇතුලත් කරන්න", type="password", key="login_password")
@@ -33,17 +32,16 @@ if not st.session_state.logged_in:
             st.error("වැරදි password!")
     st.stop()
 
-# ------------------ Title Style ------------------
+# ------------------ Title ------------------
 st.markdown("<h2 style='color: navy;'>හවුපේ උතුර 175/B</h2>", unsafe_allow_html=True)
 st.markdown("<h1 style='color: navy;'>ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම</h1>", unsafe_allow_html=True)
 
 # ------------------ Dashboard ------------------
-@st.cache_data(ttl=5)  # 5 seconds ගානට reload වෙන්න (refresh කළාම update වෙන්න)
+@st.cache_data(ttl=5)
 def load_data():
     data = worksheet.get_all_values()
     if len(data) > 0:
-        headers = data[0]
-        df = pd.DataFrame(data[1:], columns=headers)
+        df = pd.DataFrame(data[1:], columns=data[0])
         df['උපන් දිනය'] = pd.to_datetime(df['උපන් දිනය'], errors='coerce')
         df['Age'] = (datetime.now() - df['උපන් දිනය']).dt.days / 365.25
         if 'මාසික ආදායම' in df.columns:
@@ -139,7 +137,7 @@ if submitted:
             worksheet.append_row(new_row)
             st.success(f"සාර්ථකයි! {name} එකතු වුණා ✓")
             st.balloons()
-            st.rerun()  # Data එකතු කළාම auto refresh වෙලා dashboard update වෙන්න
+            st.rerun()
         except Exception as e:
             st.error(f"දත්ත එකතු කිරීමේදී ගැටලුවක්: {str(e)}")
 
@@ -170,7 +168,7 @@ if st.button("Load කරන්න"):
         match = df[df['NIC අංකය'] == edit_nic]
         if not match.empty:
             row_data = match.iloc[0]
-            row_index = match.index[0] + 2
+            row_index = match.index[0] + 2  # Row index (1-based + headers)
 
             st.write(f"සංස්කරණයට දත්ත load වුණා (Row {row_index}):")
 
@@ -203,26 +201,27 @@ if st.button("Load කරන්න"):
 
                 if st.form_submit_button("Update කරන්න"):
                     updated_row = [
-                        household_id_edit,
-                        nic_edit,
-                        name_edit,
-                        role_edit,
-                        job_edit,
-                        vehicle1_edit,
-                        vehicle2_edit,
-                        gender_edit,
-                        str(dob_edit) if dob_edit else "",
-                        address_edit,
-                        education_edit,
-                        email_edit,
-                        home_phone_edit,
-                        mobile_phone_edit,
-                        ethnicity_edit,
-                        str(monthly_income_edit),
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        [household_id_edit or ''],
+                        [nic_edit or ''],
+                        [name_edit or ''],
+                        [role_edit or ''],
+                        [job_edit or ''],
+                        [vehicle1_edit or ''],
+                        [vehicle2_edit or ''],
+                        [gender_edit or ''],
+                        [str(dob_edit) if dob_edit else ''],
+                        [address_edit or ''],
+                        [education_edit or ''],
+                        [email_edit or ''],
+                        [home_phone_edit or ''],
+                        [mobile_phone_edit or ''],
+                        [ethnicity_edit or ''],
+                        [str(monthly_income_edit) or ''],
+                        [datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
                     ]
-                    worksheet.update(range_name=f'A{row_index}:Q{row_index}', values=[updated_row])
+                    # Update කරනකොට values එක list of lists විදිහට දෙන්න
+                    worksheet.update(range_name=f'A{row_index}:Q{row_index}', values=updated_row)
                     st.success(f"සංස්කරණය සාර්ථකයි! Row {row_index} update වුණා.")
-                    st.rerun()  # Refresh to update dashboard
+                    st.rerun()
         else:
             st.error("මේ NIC අංකය sheet එකේ නැහැ.")
