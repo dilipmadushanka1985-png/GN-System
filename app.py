@@ -3,21 +3,26 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime, date
 import pandas as pd
-import re
 
 # ------------------ Google Sheets Connection ------------------
 @st.cache_resource
 def get_sheet():
     creds_dict = dict(st.secrets["GOOGLE_CREDENTIALS"])
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(creds)
+    
     SHEET_ID = "1itCCxoIfEWWroY5c3ukjLho9B1V0QM6WwR-6Z2rMORE"
     return client.open_by_key(SHEET_ID).sheet1
 
 worksheet = get_sheet()
 
-# ------------------ Login ------------------
+# ------------------ Simple Login ------------------
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
@@ -25,23 +30,24 @@ if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
     password = st.text_input("Password ඇතුලත් කරන්න", type="password")
     if st.button("Login"):
-        if password == "gnnegombo2025":  # Change this!
+        if password == "gnnegombo2025":  # මෙතන ඔයාගේ password එක දාන්න
             st.session_state.logged_in = True
             st.rerun()
         else:
             st.error("වැරදි password!")
     st.stop()
 
-# ------------------ Title ------------------
+# ------------------ Title Style ------------------
 st.markdown("<h2 style='color: navy;'>හවුපේ උතුර 175/B</h2>", unsafe_allow_html=True)
 st.markdown("<h1 style='color: navy;'>ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම</h1>", unsafe_allow_html=True)
 
 # ------------------ Dashboard ------------------
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=10)  # 10 seconds ගානට reload වෙන්න
 def load_data():
     data = worksheet.get_all_values()
     if len(data) > 0:
-        df = pd.DataFrame(data[1:], columns=data[0])
+        headers = data[0]
+        df = pd.DataFrame(data[1:], columns=headers)
         df['උපන් දිනය'] = pd.to_datetime(df['උපන් දිනය'], errors='coerce')
         df['Age'] = (datetime.now() - df['උපන් දිනය']).dt.days / 365.25
         if 'මාසික ආදායම' in df.columns:
@@ -77,7 +83,7 @@ with st.form("member_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
     with col1:
         household_id = st.text_input("පවුල් අංකය", placeholder="GN-001-2025")
-        nic = st.text_input("NIC අංකය", help="පරණ: 123456789V හෝ අලුත්: 198515503193")
+        nic = st.text_input("NIC අංකය")
         name = st.text_input("සම්පූර්ණ නම")
         address = st.text_input("ලිපිනය")
     with col2:
@@ -110,13 +116,8 @@ with st.form("member_form", clear_on_submit=True):
     submitted = st.form_submit_button("එකතු කරන්න")
 
 if submitted:
-    # NIC validation
-    if not nic:
-        st.error("NIC අංකය අනිවාර්යයි!")
-    elif not re.match(r'^\d{9}[VvXx]$', nic) and not re.match(r'^\d{12}$', nic):
-        st.error("NIC format එක වැරදියි!\nපරණ: 9 digits + V/X (උදා: 123456789V)\nඅලුත්: 12 digits (උදා: 198515503193)")
-    elif not household_id or not name:
-        st.error("පවුල් අංකය සහ නම අනිවාර්යයි!")
+    if not household_id or not nic or not name:
+        st.error("පවුල් අංකය, NIC සහ නම අනිවාර්යයි!")
     else:
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -142,6 +143,7 @@ if submitted:
             worksheet.append_row(new_row)
             st.success(f"සාර්ථකයි! {name} එකතු වුණා ✓")
             st.balloons()
+            st.rerun()  # Data එකතු කළාම auto refresh වෙලා dashboard update වෙන්න
         except Exception as e:
             st.error(f"දත්ත එකතු කිරීමේදී ගැටලුවක්: {str(e)}")
 
@@ -185,7 +187,7 @@ if st.button("Load කරන්න"):
                 vehicle1_edit = st.text_input("වාහන අංකය 1", value=str(row_data.get('වාහන අංකය 1', '')))
                 vehicle2_edit = st.text_input("වාහන අංකය 2", value=str(row_data.get('වාහන අංකය 2', '')))
                 gender_edit = st.radio("ලිංගභාවය", options=["පිරිමි", "ගැහැණු", "වෙනත්"], horizontal=True, index=["පිරිමි", "ගැහැණු", "වෙනත්"].index(row_data.get('ලිංගභාවය', 'පිරිමි')) if row_data.get('ලිංගභාවය') in ["පිරිමි", "ගැහැණු", "වෙනත්"] else 0)
-
+                
                 dob_value = None
                 if row_data.get('උපන් දිනය') and pd.notna(row_data['උපන් දිනය']):
                     try:
@@ -223,8 +225,9 @@ if st.button("Load කරන්න"):
                         str(monthly_income_edit),
                         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     ]
+                    # Update කරනකොට values එක list of lists විදිහට දෙන්න
                     worksheet.update(range_name=f'A{row_index}:Q{row_index}', values=[updated_row])
                     st.success(f"සංස්කරණය සාර්ථකයි! Row {row_index} update වුණා.")
-                    st.rerun()
+                    st.rerun()  # Refresh to update dashboard
         else:
             st.error("මේ NIC අංකය sheet එකේ නැහැ.")
