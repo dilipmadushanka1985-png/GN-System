@@ -4,36 +4,59 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime, date
 import pandas as pd
 
-# ------------------ Google Sheets Connection ------------------
+# ------------------ Google Sheets Credentials (common for all users) ------------------
 @st.cache_resource
-def get_sheet():
+def get_creds():
     creds_dict = dict(st.secrets["GOOGLE_CREDENTIALS"])
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-    client = gspread.authorize(creds)
-    SHEET_ID = "1itCCxoIfEWWroY5c3ukjLho9B1V0QM6WwR-6Z2rMORE"
-    return client.open_by_key(SHEET_ID).sheet1
+    return Credentials.from_service_account_info(creds_dict, scopes=scopes)
 
-worksheet = get_sheet()
+# ------------------ Multi-User: User to Sheet Mapping ------------------
+# මෙතන එක එක user එකට එක එක sheet ID එක දාන්න
+USER_SHEETS = {
+    "dilip": "1itCCxoIfEWWroY5c3ukjLho9B1V0QM6WwR-6Z2rMORE",  # ඔයාගේ sheet ID
+    "user1": "1abcDEF1234567890",  # අලුත් user එකක sheet ID
+    "user2": "1xyzABC9876543210",  # තවත් user එකක sheet ID
+    # ඔයාට ඕන users එකතු කරන්න මෙතනට
+}
 
-# ------------------ Persistent Login (refresh වුණත් logout නොවෙන්න) ------------------
+# ------------------ Login ------------------
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
+    st.session_state.username = None
 
 if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
-    password = st.text_input("Password ඇතුලත් කරන්න", type="password", key="login_password")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
     if st.button("Login"):
-        if password == "gnnegombo2025":  # මෙතන ඔයාගේ password එක දාන්න
+        # මෙතන simple username-password check එකක් (production එකට change කරන්න)
+        if username in USER_SHEETS and password == "gnnegombo2025":  # ඔයාට ඕන password එක දාන්න
             st.session_state.logged_in = True
-            st.success("Login සාර්ථකයි!")
+            st.session_state.username = username
+            st.success(f"Login සාර්ථකයි! Welcome {username}")
             st.rerun()
         else:
-            st.error("වැරදි password!")
+            st.error("වැරදි username හෝ password!")
     st.stop()
 
-# ------------------ Title Style ------------------
-st.markdown("<h2 style='color: navy;'>හවුපේ උතුර 175/B</h2>", unsafe_allow_html=True)
+# Logged in user එකට එක sheet එකක් assign කරනවා
+SHEET_ID = USER_SHEETS.get(st.session_state.username)
+if not SHEET_ID:
+    st.error("User එකට sheet එකක් assign කරලා නැහැ. Admin එක්ක කතා කරන්න.")
+    st.stop()
+
+# User එකට එක sheet එකක් open කරනවා
+@st.cache_resource
+def get_user_sheet():
+    creds = get_creds()
+    client = gspread.authorize(creds)
+    return client.open_by_key(SHEET_ID).sheet1
+
+worksheet = get_user_sheet()
+
+# ------------------ Title ------------------
+st.markdown(f"<h2 style='color: navy;'>හවුපේ උතුර 175/B - {st.session_state.username}</h2>", unsafe_allow_html=True)
 st.markdown("<h1 style='color: navy;'>ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම</h1>", unsafe_allow_html=True)
 
 # ------------------ Dashboard ------------------
@@ -135,9 +158,9 @@ if submitted:
                 timestamp
             ]
             worksheet.append_row(new_row)
-            st.success(f"සාර්ථකයි! {name} එකතු වුණා ✓")
+            st.success(f"සාර්ථකයි! {name} එකතු වුණා ✓ (Sheet: {SHEET_ID})")
             st.balloons()
-            st.rerun()  # Data එකතු කළාම auto refresh වෙලා dashboard update වෙන්න
+            st.rerun()
         except Exception as e:
             st.error(f"දත්ත එකතු කිරීමේදී ගැටලුවක්: {str(e)}")
 
