@@ -16,7 +16,7 @@ def get_sheet():
 
 worksheet = get_sheet()
 
-# ------------------ Persistent Login ------------------
+# ------------------ Persistent Login (refresh වුණත් logout නොවෙන්න) ------------------
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
@@ -24,7 +24,7 @@ if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
     password = st.text_input("Password ඇතුලත් කරන්න", type="password", key="login_password")
     if st.button("Login"):
-        if password == "gnnegombo2025":
+        if password == "gnnegombo2025":  # මෙතන ඔයාගේ password එක දාන්න
             st.session_state.logged_in = True
             st.success("Login සාර්ථකයි!")
             st.rerun()
@@ -32,7 +32,7 @@ if not st.session_state.logged_in:
             st.error("වැරදි password!")
     st.stop()
 
-# ------------------ Title ------------------
+# ------------------ Title Style ------------------
 st.markdown("<h2 style='color: navy;'>හවුපේ උතුර 175/B</h2>", unsafe_allow_html=True)
 st.markdown("<h1 style='color: navy;'>ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම</h1>", unsafe_allow_html=True)
 
@@ -137,7 +137,7 @@ if submitted:
             worksheet.append_row(new_row)
             st.success(f"සාර්ථකයි! {name} එකතු වුණා ✓")
             st.balloons()
-            st.rerun()
+            st.rerun()  # Data එකතු කළාම auto refresh වෙලා dashboard update වෙන්න
         except Exception as e:
             st.error(f"දත්ත එකතු කිරීමේදී ගැටලුවක්: {str(e)}")
 
@@ -159,71 +159,3 @@ if st.button("සෙවීම"):
                 st.info("කිසිම results නැහැ.")
     except Exception as e:
         st.error(f"සෙවීමේදී ගැටලුවක්: {e}")
-
-# ------------------ Edit Feature ------------------
-st.subheader("දත්ත සංස්කරණය")
-edit_nic = st.text_input("සංස්කරණයට NIC අංකය ඇතුලත් කරන්න")
-if st.button("Load කරන්න"):
-    if not df.empty:
-        match = df[df['NIC අංකය'] == edit_nic]
-        if not match.empty:
-            row_data = match.iloc[0]
-            row_index = match.index[0] + 2
-
-            st.write(f"සංස්කරණයට දත්ත load වුණා (Row {row_index}):")
-
-            with st.form("edit_form", clear_on_submit=True):
-                household_id_edit = st.text_input("පවුල් අංකය", value=str(row_data.get('පවුල් අංකය', '')))
-                nic_edit = st.text_input("NIC අංකය", value=str(row_data.get('NIC අංකය', '')), disabled=True)
-                name_edit = st.text_input("නම", value=str(row_data.get('නම', '')))
-                role_edit = st.selectbox("භූමිකාව", options=["පවුලේ ප්‍රධානි", "බිරිඳ", "ස්වාමිපුරුෂයා", "දරුවා", "මව", "පියා", "සහෝදරයා", "සහෝදරිය", "වෙනත්"], index=["පවුලේ ප්‍රධානි", "බිරිඳ", "ස්වාමිපුරුෂයා", "දරුවා", "මව", "පියා", "සහෝදරයා", "සහෝදරිය", "වෙනත්"].index(row_data.get('භූමිකාව', 'වෙනත්')) if row_data.get('භූමිකාව') in ["පවුලේ ප්‍රධානි", "බිරිඳ", "ස්වාමිපුරුෂයා", "දරුවා", "මව", "පියා", "සහෝදරයා", "සහෝදරිය", "වෙනත්"] else 8)
-                job_edit = st.text_input("රැකියාව", value=str(row_data.get('රැකියාව', '')))
-                vehicle1_edit = st.text_input("වාහන අංකය 1", value=str(row_data.get('වාහන අංකය 1', '')))
-                vehicle2_edit = st.text_input("වාහන අංකය 2", value=str(row_data.get('වාහන අංකය 2', '')))
-                gender_edit = st.radio("ලිංගභාවය", options=["පිරිමි", "ගැහැණු", "වෙනත්"], horizontal=True, index=["පිරිමි", "ගැහැණු", "වෙනත්"].index(row_data.get('ලිංගභාවය', 'පිරිමි')) if row_data.get('ලිංගභාවය') in ["පිරිමි", "ගැහැණු", "වෙනත්"] else 0)
-
-                dob_value = None
-                if row_data.get('උපන් දිනය') and pd.notna(row_data['උපන් දිනය']):
-                    try:
-                        dob_value = date.fromisoformat(str(row_data['උපන් දිනය']).split(' ')[0])
-                    except (ValueError, TypeError):
-                        dob_value = None
-
-                dob_edit = st.date_input("උපන් දිනය", value=dob_value, min_value=date(1920, 1, 1), max_value=date(2050, 12, 31))
-
-                address_edit = st.text_input("ලිපිනය", value=str(row_data.get('ලිපිනය', '')))
-                education_edit = st.text_input("අධ්‍යාපන සුදුසුකම්", value=str(row_data.get('අධ්‍යාපන සුදුසුකම්', '')))
-                email_edit = st.text_input("විද්‍යුත් ලිපිනය", value=str(row_data.get('විද්‍යුත් ලිපිනය', '')))
-                home_phone_edit = st.text_input("දුරකථන අංකය (නිවස)", value=str(row_data.get('දුරකථන අංකය (නිවස)', '')))
-                mobile_phone_edit = st.text_input("දුරකථන අංකය (ජංගම)", value=str(row_data.get('දුරකථන අංකය (ජංගම)', '')))
-                ethnicity_edit = st.selectbox("ජාතිය", options=["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"], index=["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"].index(row_data.get('ජාතිය', 'සිංහල')) if row_data.get('ජාතිය') in ["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"] else 0)
-                monthly_income_edit = st.number_input("මාසික ආදායම", value=float(row_data.get('මාසික ආදායම', 0)) if pd.notnull(row_data.get('මාසික ආදායම', 0)) else 0.0, min_value=0.0, step=1000.0)
-
-                if st.form_submit_button("Update කරන්න"):
-                    updated_row = [[
-                        household_id_edit or '',
-                        nic_edit or '',
-                        name_edit or '',
-                        role_edit or '',
-                        job_edit or '',
-                        vehicle1_edit or '',
-                        vehicle2_edit or '',
-                        gender_edit or '',
-                        str(dob_edit) if dob_edit else '',
-                        address_edit or '',
-                        education_edit or '',
-                        email_edit or '',
-                        home_phone_edit or '',
-                        mobile_phone_edit or '',
-                        ethnicity_edit or '',
-                        str(monthly_income_edit) or '',
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    ]]
-                    try:
-                        worksheet.update(range_name=f'A{row_index}:Q{row_index}', values=updated_row)
-                        st.success(f"සංස්කරණය සාර්ථකයි! Row {row_index} update වුණා.")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Update කිරීමේදී ගැටලුවක්: {str(e)}")
-        else:
-            st.error("මේ NIC අංකය sheet එකේ නැහැ.")
