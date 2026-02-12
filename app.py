@@ -4,7 +4,7 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime, date
 import pandas as pd
 
-# Google Sheets connection
+# ------------------ Google Sheets Connection ------------------
 @st.cache_resource
 def get_sheet():
     creds_dict = dict(st.secrets["GOOGLE_CREDENTIALS"])
@@ -16,7 +16,7 @@ def get_sheet():
 
 worksheet = get_sheet()
 
-# Login
+# ------------------ Login ------------------
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
@@ -31,11 +31,11 @@ if not st.session_state.logged_in:
             st.error("වැරදි password!")
     st.stop()
 
-# Title
+# ------------------ Title ------------------
 st.markdown("<h2 style='color: navy;'>හවුපේ උතුර 175/B</h2>", unsafe_allow_html=True)
 st.markdown("<h1 style='color: navy;'>ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම</h1>", unsafe_allow_html=True)
 
-# Dashboard
+# ------------------ Dashboard ------------------
 @st.cache_data(ttl=60)
 def load_data():
     data = worksheet.get_all_values()
@@ -51,19 +51,14 @@ def load_data():
 df = load_data()
 
 if not df.empty:
-    # මුළු පවුල් ගණන = unique පවුල් අංකය count
     total_families = df['පවුල් අංකය'].dropna().nunique()
-
-    # මුළු සාමාජිකයින් ගණන = සම්පූර්ණ නම තියෙන row ගණන (empty name skip කරලා)
-    total_members = df['නම'].dropna().count()   # හෝ len(df[df['නම'].notna()])
-
+    total_members = df['නම'].dropna().count()  # සම්පූර්ණ නම තියෙන rows ගණන
     age_groups = {
         '0-18': len(df[(df['Age'].notnull()) & (df['Age'] >= 0) & (df['Age'] <= 18)]),
         '19-35': len(df[(df['Age'].notnull()) & (df['Age'] > 18) & (df['Age'] <= 35)]),
         '36-60': len(df[(df['Age'].notnull()) & (df['Age'] > 35) & (df['Age'] <= 60)]),
         '60+': len(df[(df['Age'].notnull()) & (df['Age'] > 60)])
     }
-
     st.subheader("Dashboard")
     col1, col2 = st.columns(2)
     with col1:
@@ -74,7 +69,7 @@ if not df.empty:
         for group, count in age_groups.items():
             st.write(f"{group}: {count}")
 
-# Data Entry Form
+# ------------------ Data Entry Form ------------------
 st.markdown("<h3 style='color: darkgreen;'>නව පවුල් සාමාජිකයෙකු එකතු කරන්න</h3>", unsafe_allow_html=True)
 
 with st.form("member_form", clear_on_submit=True):
@@ -100,6 +95,16 @@ with st.form("member_form", clear_on_submit=True):
         ethnicity = st.selectbox("ජාතිය", ["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"])
         monthly_income = st.number_input("මාසික ආදායම (Rs.)", min_value=0.0, step=1000.0)
     dob = st.date_input("උපන් දිනය", value=None, min_value=date(1920, 1, 1), max_value=date(2050, 12, 31))
+
+    st.markdown("""
+    <style>
+    div.stButton > button:first-child {
+        background-color: lightgreen;
+        color: red;
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
     submitted = st.form_submit_button("එකතු කරන්න")
 
@@ -134,9 +139,9 @@ if submitted:
         except Exception as e:
             st.error(f"දත්ත එකතු කිරීමේදී ගැටලුවක්: {str(e)}")
 
-# Search Feature
+# ------------------ Search Feature ------------------
 st.subheader("දත්ත සෙවීම")
-search_query = st.text_input("පවුල් අංකය, NIC හෝ නම ඇතුලත් කරන්න", placeholder="ඔයාගේ සෙවුම් වචනය ඇතුලත් කරන්න")
+search_query = st.text_input("පවුල් අංකය, NIC හෝ නම ඇතුලත් කරන්න")
 if st.button("සෙවීම"):
     try:
         if not df.empty:
@@ -145,19 +150,15 @@ if st.button("සෙවීම"):
                          (df['නම'].str.contains(search_query, na=False, case=False))]
             if not results.empty:
                 st.write("සෙවුම් ප්‍රතිඵල:")
-                selected_rows = []
                 for i, row in results.iterrows():
-                    if st.checkbox(f"{row['නම']} (NIC: {row['NIC අංකය']}, පවුල් අංකය: {row['පවුල් අංකය']})", key=f"select_{i}"):
-                        selected_rows.append(row)
-                if selected_rows:
-                    selected_df = pd.DataFrame(selected_rows)
-                    st.table(selected_df)
+                    if st.checkbox(f"{row['නම']} (NIC: {row['NIC අංකය']})", key=f"select_{i}"):
+                        st.table(row)
             else:
                 st.info("කිසිම results නැහැ.")
     except Exception as e:
         st.error(f"සෙවීමේදී ගැටලුවක්: {e}")
 
-# Edit Feature (දැන් full එකතු කළා)
+# ------------------ Edit Feature ------------------
 st.subheader("දත්ත සංස්කරණය")
 edit_nic = st.text_input("සංස්කරණයට NIC අංකය ඇතුලත් කරන්න")
 if st.button("Load කරන්න"):
@@ -165,61 +166,60 @@ if st.button("Load කරන්න"):
         match = df[df['NIC අංකය'] == edit_nic]
         if not match.empty:
             row_data = match.iloc[0]
-            row_index = match.index[0] + 2
-            
-            st.write("සංස්කරණයට දත්ත load වුණා:")
-            
+            row_index = match.index[0] + 2  # Row index (1-based + headers)
+
+            st.write(f"සංස්කරණයට දත්ත load වුණා (Row {row_index}):")
+
             with st.form("edit_form", clear_on_submit=True):
-                household_id_edit = st.text_input("පවුල් අංකය", value=row_data.get('පවුල් අංකය', ''))
-                nic_edit = st.text_input("NIC අංකය", value=row_data.get('NIC අංකය', ''), disabled=True)
-                name_edit = st.text_input("නම", value=row_data.get('නම', ''))
+                household_id_edit = st.text_input("පවුල් අංකය", value=str(row_data.get('පවුල් අංකය', '')))
+                nic_edit = st.text_input("NIC අංකය", value=str(row_data.get('NIC අංකය', '')), disabled=True)
+                name_edit = st.text_input("නම", value=str(row_data.get('නම', '')))
                 role_edit = st.selectbox("භූමිකාව", options=["පවුලේ ප්‍රධානි", "බිරිඳ", "ස්වාමිපුරුෂයා", "දරුවා", "මව", "පියා", "සහෝදරයා", "සහෝදරිය", "වෙනත්"], index=["පවුලේ ප්‍රධානි", "බිරිඳ", "ස්වාමිපුරුෂයා", "දරුවා", "මව", "පියා", "සහෝදරයා", "සහෝදරිය", "වෙනත්"].index(row_data.get('භූමිකාව', 'වෙනත්')) if row_data.get('භූමිකාව') in ["පවුලේ ප්‍රධානි", "බිරිඳ", "ස්වාමිපුරුෂයා", "දරුවා", "මව", "පියා", "සහෝදරයා", "සහෝදරිය", "වෙනත්"] else 8)
-                job_edit = st.text_input("රැකියාව", value=row_data.get('රැකියාව', ''))
-                vehicle1_edit = st.text_input("වාහන අංකය 1", value=row_data.get('වාහන අංකය 1', ''))
-                vehicle2_edit = st.text_input("වාහන අංකය 2", value=row_data.get('වාහන අංකය 2', ''))
+                job_edit = st.text_input("රැකියාව", value=str(row_data.get('රැකියාව', '')))
+                vehicle1_edit = st.text_input("වාහන අංකය 1", value=str(row_data.get('වාහන අංකය 1', '')))
+                vehicle2_edit = st.text_input("වාහන අංකය 2", value=str(row_data.get('වාහන අංකය 2', '')))
                 gender_edit = st.radio("ලිංගභාවය", options=["පිරිමි", "ගැහැණු", "වෙනත්"], horizontal=True, index=["පිරිමි", "ගැහැණු", "වෙනත්"].index(row_data.get('ලිංගභාවය', 'පිරිමි')) if row_data.get('ලිංගභාවය') in ["පිරිමි", "ගැහැණු", "වෙනත්"] else 0)
-                
-                # DOB safe handling
+
                 dob_value = None
                 if row_data.get('උපන් දිනය') and pd.notna(row_data['උපන් දිනය']):
                     try:
-                        dob_value = date.fromisoformat(row_data['උපන් දිනය'])
+                        dob_value = date.fromisoformat(str(row_data['උපන් දිනය']).split(' ')[0])
                     except (ValueError, TypeError):
                         dob_value = None
-                
+
                 dob_edit = st.date_input("උපන් දිනය", value=dob_value, min_value=date(1920, 1, 1), max_value=date(2050, 12, 31))
-                
-                address_edit = st.text_input("ලිපිනය", value=row_data.get('ලිපිනය', ''))
-                education_edit = st.text_input("අධ්‍යාපන සුදුසුකම්", value=row_data.get('අධ්‍යාපන සුදුසුකම්', ''))
-                email_edit = st.text_input("විද්‍යුත් ලිපිනය", value=row_data.get('විද්‍යුත් ලිපිනය', ''))
-                home_phone_edit = st.text_input("දුරකථන අංකය (නිවස)", value=row_data.get('දුරකථන අංකය (නිවස)', ''))
-                mobile_phone_edit = st.text_input("දුරකථන අංකය (ජංගම)", value=row_data.get('දුරකථන අංකය (ජංගම)', ''))
+
+                address_edit = st.text_input("ලිපිනය", value=str(row_data.get('ලිපිනය', '')))
+                education_edit = st.text_input("අධ්‍යාපන සුදුසුකම්", value=str(row_data.get('අධ්‍යාපන සුදුසුකම්', '')))
+                email_edit = st.text_input("විද්‍යුත් ලිපිනය", value=str(row_data.get('විද්‍යුත් ලිපිනය', '')))
+                home_phone_edit = st.text_input("දුරකථන අංකය (නිවස)", value=str(row_data.get('දුරකථන අංකය (නිවස)', '')))
+                mobile_phone_edit = st.text_input("දුරකථන අංකය (ජංගම)", value=str(row_data.get('දුරකථන අංකය (ජංගම)', '')))
                 ethnicity_edit = st.selectbox("ජාතිය", options=["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"], index=["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"].index(row_data.get('ජාතිය', 'සිංහල')) if row_data.get('ජාතිය') in ["සිංහල", "දෙමළ", "මුස්ලිම්", "බර්ගර්", "වෙනත්"] else 0)
                 monthly_income_edit = st.number_input("මාසික ආදායම", value=float(row_data.get('මාසික ආදායම', 0)) if pd.notnull(row_data.get('මාසික ආදායම', 0)) else 0.0, min_value=0.0, step=1000.0)
 
                 if st.form_submit_button("Update කරන්න"):
                     updated_row = [
-                        household_id_edit,
-                        nic_edit,
-                        name_edit,
-                        role_edit,
-                        job_edit,
-                        vehicle1_edit,
-                        vehicle2_edit,
-                        gender_edit,
-                        str(dob_edit) if dob_edit else "",
-                        address_edit,
-                        education_edit,
-                        email_edit,
-                        home_phone_edit,
-                        mobile_phone_edit,
-                        ethnicity_edit,
-                        str(monthly_income_edit),
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        [household_id_edit],
+                        [nic_edit],
+                        [name_edit],
+                        [role_edit],
+                        [job_edit],
+                        [vehicle1_edit],
+                        [vehicle2_edit],
+                        [gender_edit],
+                        [str(dob_edit) if dob_edit else ''],
+                        [address_edit],
+                        [education_edit],
+                        [email_edit],
+                        [home_phone_edit],
+                        [mobile_phone_edit],
+                        [ethnicity_edit],
+                        [str(monthly_income_edit)],
+                        [datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
                     ]
-                    worksheet.update(f'A{row_index}:Q{row_index}', [updated_row])
-                    st.success("සංස්කරණය සාර්ථකයි!")
+                    # Update කරනකොට values එක list of lists විදිහට දෙන්න
+                    worksheet.update(range_name=f'A{row_index}:Q{row_index}', values=updated_row)
+                    st.success(f"සංස්කරණය සාර්ථකයි! Row {row_index} update වුණා.")
                     st.rerun()
         else:
-            st.error("NIC අංකය නැහැ.")
-
+            st.error("මේ NIC අංකය sheet එකේ නැහැ.")
