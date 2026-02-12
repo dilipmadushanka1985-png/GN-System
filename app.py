@@ -12,12 +12,11 @@ def get_creds():
     return Credentials.from_service_account_info(creds_dict, scopes=scopes)
 
 # ------------------ Multi-User: User to Sheet Mapping ------------------
-# මෙතන එක එක user එකට එක එක sheet ID එක දාන්න
 USER_SHEETS = {
-    "dilip": "1itCCxoIfEWWroY5c3ukjLho9B1V0QM6WwR-6Z2rMORE",  # ඔයාගේ sheet ID
-    "user1": "1abcDEF1234567890",  # අලුත් user එකක sheet ID
-    "user2": "1xyzABC9876543210",  # තවත් user එකක sheet ID
-    # ඔයාට ඕන users එකතු කරන්න මෙතනට
+    "user1": "1Swlnc6pMFhHlPXyHPs0s_scBJF--wwj6V6D0Ohdj_ZI",
+    "user2": "1uHvsf5JYcy9rNYzVWTkcZTvDASu6GsJK1IM3oHO-3HY",
+    # ඔයාට තව users ඕන නම් මෙතනට එකතු කරගන්න
+    # උදා: "dilip": "1itCCxoIfEWWroY5c3ukjLho9B1V0QM6WwR-6Z2rMORE",
 }
 
 # ------------------ Login ------------------
@@ -27,11 +26,10 @@ if 'logged_in' not in st.session_state:
 
 if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
-    username = st.text_input("Username")
+    username = st.text_input("Username", placeholder="user1 හෝ user2")
     password = st.text_input("Password", type="password")
     if st.button("Login"):
-        # මෙතන simple username-password check එකක් (production එකට change කරන්න)
-        if username in USER_SHEETS and password == "gnnegombo2025":  # ඔයාට ඕන password එක දාන්න
+        if username in USER_SHEETS and password == "gnnegombo2025":  # password එක එකම තියෙනවා
             st.session_state.logged_in = True
             st.session_state.username = username
             st.success(f"Login සාර්ථකයි! Welcome {username}")
@@ -46,7 +44,7 @@ if not SHEET_ID:
     st.error("User එකට sheet එකක් assign කරලා නැහැ. Admin එක්ක කතා කරන්න.")
     st.stop()
 
-# User එකට එක sheet එකක් open කරනවා
+# User එකට එක sheet එක open කරනවා
 @st.cache_resource
 def get_user_sheet():
     creds = get_creds()
@@ -55,7 +53,7 @@ def get_user_sheet():
 
 worksheet = get_user_sheet()
 
-# ------------------ Title ------------------
+# ------------------ Title (user name එකත් පෙන්වනවා) ------------------
 st.markdown(f"<h2 style='color: navy;'>හවුපේ උතුර 175/B - {st.session_state.username}</h2>", unsafe_allow_html=True)
 st.markdown("<h1 style='color: navy;'>ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම</h1>", unsafe_allow_html=True)
 
