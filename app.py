@@ -3,6 +3,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime, date
 import pandas as pd
+import re
 
 # ------------------ Google Sheets Connection ------------------
 @st.cache_resource
@@ -24,7 +25,7 @@ if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
     password = st.text_input("Password ඇතුලත් කරන්න", type="password")
     if st.button("Login"):
-        if password == "gnnegombo2025":
+        if password == "gnnegombo2025":  # Change this!
             st.session_state.logged_in = True
             st.rerun()
         else:
@@ -52,7 +53,7 @@ df = load_data()
 
 if not df.empty:
     total_families = df['පවුල් අංකය'].dropna().nunique()
-    total_members = df['නම'].dropna().count()  # සම්පූර්ණ නම තියෙන rows ගණන
+    total_members = df['නම'].dropna().count()
     age_groups = {
         '0-18': len(df[(df['Age'].notnull()) & (df['Age'] >= 0) & (df['Age'] <= 18)]),
         '19-35': len(df[(df['Age'].notnull()) & (df['Age'] > 18) & (df['Age'] <= 35)]),
@@ -76,7 +77,7 @@ with st.form("member_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
     with col1:
         household_id = st.text_input("පවුල් අංකය", placeholder="GN-001-2025")
-        nic = st.text_input("NIC අංකය")
+        nic = st.text_input("NIC අංකය", help="පරණ: 123456789V හෝ අලුත්: 198515503193")
         name = st.text_input("සම්පූර්ණ නම")
         address = st.text_input("ලිපිනය")
     with col2:
@@ -109,8 +110,13 @@ with st.form("member_form", clear_on_submit=True):
     submitted = st.form_submit_button("එකතු කරන්න")
 
 if submitted:
-    if not household_id or not nic or not name:
-        st.error("පවුල් අංකය, NIC සහ නම අනිවාර්යයි!")
+    # NIC validation
+    if not nic:
+        st.error("NIC අංකය අනිවාර්යයි!")
+    elif not re.match(r'^\d{9}[VvXx]$', nic) and not re.match(r'^\d{12}$', nic):
+        st.error("NIC format එක වැරදියි!\nපරණ: 9 digits + V/X (උදා: 123456789V)\nඅලුත්: 12 digits (උදා: 198515503193)")
+    elif not household_id or not name:
+        st.error("පවුල් අංකය සහ නම අනිවාර්යයි!")
     else:
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -166,7 +172,7 @@ if st.button("Load කරන්න"):
         match = df[df['NIC අංකය'] == edit_nic]
         if not match.empty:
             row_data = match.iloc[0]
-            row_index = match.index[0] + 2  # Row index (1-based + headers)
+            row_index = match.index[0] + 2
 
             st.write(f"සංස්කරණයට දත්ත load වුණා (Row {row_index}):")
 
@@ -199,26 +205,25 @@ if st.button("Load කරන්න"):
 
                 if st.form_submit_button("Update කරන්න"):
                     updated_row = [
-                        [household_id_edit],
-                        [nic_edit],
-                        [name_edit],
-                        [role_edit],
-                        [job_edit],
-                        [vehicle1_edit],
-                        [vehicle2_edit],
-                        [gender_edit],
-                        [str(dob_edit) if dob_edit else ''],
-                        [address_edit],
-                        [education_edit],
-                        [email_edit],
-                        [home_phone_edit],
-                        [mobile_phone_edit],
-                        [ethnicity_edit],
-                        [str(monthly_income_edit)],
-                        [datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
+                        household_id_edit,
+                        nic_edit,
+                        name_edit,
+                        role_edit,
+                        job_edit,
+                        vehicle1_edit,
+                        vehicle2_edit,
+                        gender_edit,
+                        str(dob_edit) if dob_edit else "",
+                        address_edit,
+                        education_edit,
+                        email_edit,
+                        home_phone_edit,
+                        mobile_phone_edit,
+                        ethnicity_edit,
+                        str(monthly_income_edit),
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     ]
-                    # Update කරනකොට values එක list of lists විදිහට දෙන්න
-                    worksheet.update(range_name=f'A{row_index}:Q{row_index}', values=updated_row)
+                    worksheet.update(range_name=f'A{row_index}:Q{row_index}', values=[updated_row])
                     st.success(f"සංස්කරණය සාර්ථකයි! Row {row_index} update වුණා.")
                     st.rerun()
         else:
