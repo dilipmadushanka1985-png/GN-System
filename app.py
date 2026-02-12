@@ -20,6 +20,7 @@ worksheet = get_sheet()
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
+# Login check කරන්නේ session state එකෙන් විතරයි
 if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
     password = st.text_input("Password ඇතුලත් කරන්න", type="password", key="login_password")
@@ -37,7 +38,7 @@ st.markdown("<h2 style='color: navy;'>හවුපේ උතුර 175/B</h2>", 
 st.markdown("<h1 style='color: navy;'>ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම</h1>", unsafe_allow_html=True)
 
 # ------------------ Dashboard ------------------
-@st.cache_data(ttl=10)  # 10 seconds ගානට reload වෙන්න
+@st.cache_data(ttl=5)  # 5 seconds ගානට reload වෙන්න (refresh කළාම update වෙන්න)
 def load_data():
     data = worksheet.get_all_values()
     if len(data) > 0:
