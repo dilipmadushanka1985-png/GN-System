@@ -51,14 +51,19 @@ def load_data():
 df = load_data()
 
 if not df.empty:
-    total_families = df['පවුල් අංකය'].nunique()
-    total_members = len(df)
+    # මුළු පවුල් ගණන = unique පවුල් අංකය count
+    total_families = df['පවුල් අංකය'].dropna().nunique()
+
+    # මුළු සාමාජිකයින් ගණන = සම්පූර්ණ නම තියෙන row ගණන (empty name skip කරලා)
+    total_members = df['නම'].dropna().count()   # හෝ len(df[df['නම'].notna()])
+
     age_groups = {
         '0-18': len(df[(df['Age'].notnull()) & (df['Age'] >= 0) & (df['Age'] <= 18)]),
         '19-35': len(df[(df['Age'].notnull()) & (df['Age'] > 18) & (df['Age'] <= 35)]),
         '36-60': len(df[(df['Age'].notnull()) & (df['Age'] > 35) & (df['Age'] <= 60)]),
         '60+': len(df[(df['Age'].notnull()) & (df['Age'] > 60)])
     }
+
     st.subheader("Dashboard")
     col1, col2 = st.columns(2)
     with col1:
@@ -217,3 +222,4 @@ if st.button("Load කරන්න"):
                     st.rerun()
         else:
             st.error("NIC අංකය නැහැ.")
+
