@@ -8,30 +8,25 @@ import pandas as pd
 @st.cache_resource
 def get_sheet():
     creds_dict = dict(st.secrets["GOOGLE_CREDENTIALS"])
-    
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    
+    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(creds)
-    
     SHEET_ID = "1itCCxoIfEWWroY5c3ukjLho9B1V0QM6WwR-6Z2rMORE"
     return client.open_by_key(SHEET_ID).sheet1
 
 worksheet = get_sheet()
 
-# ------------------ Simple Login ------------------
+# ------------------ Persistent Login (refresh වුණත් logout නොවෙන්න) ------------------
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
-    password = st.text_input("Password ඇතුලත් කරන්න", type="password")
+    password = st.text_input("Password ඇතුලත් කරන්න", type="password", key="login_password")
     if st.button("Login"):
         if password == "gnnegombo2025":  # මෙතන ඔයාගේ password එක දාන්න
             st.session_state.logged_in = True
+            st.success("Login සාර්ථකයි!")
             st.rerun()
         else:
             st.error("වැරදි password!")
@@ -187,7 +182,7 @@ if st.button("Load කරන්න"):
                 vehicle1_edit = st.text_input("වාහන අංකය 1", value=str(row_data.get('වාහන අංකය 1', '')))
                 vehicle2_edit = st.text_input("වාහන අංකය 2", value=str(row_data.get('වාහන අංකය 2', '')))
                 gender_edit = st.radio("ලිංගභාවය", options=["පිරිමි", "ගැහැණු", "වෙනත්"], horizontal=True, index=["පිරිමි", "ගැහැණු", "වෙනත්"].index(row_data.get('ලිංගභාවය', 'පිරිමි')) if row_data.get('ලිංගභාවය') in ["පිරිමි", "ගැහැණු", "වෙනත්"] else 0)
-                
+
                 dob_value = None
                 if row_data.get('උපන් දිනය') and pd.notna(row_data['උපන් දිනය']):
                     try:
@@ -225,7 +220,6 @@ if st.button("Load කරන්න"):
                         str(monthly_income_edit),
                         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     ]
-                    # Update කරනකොට values එක list of lists විදිහට දෙන්න
                     worksheet.update(range_name=f'A{row_index}:Q{row_index}', values=[updated_row])
                     st.success(f"සංස්කරණය සාර්ථකයි! Row {row_index} update වුණා.")
                     st.rerun()  # Refresh to update dashboard
