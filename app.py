@@ -11,10 +11,20 @@ def get_creds():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     return Credentials.from_service_account_info(creds_dict, scopes=scopes)
 
-# ------------------ User to Sheet Mapping ------------------
-USER_SHEETS = {
-    "user1": "1Swlnc6pMFhHlPXyHPs0s_scBJF--wwj6V6D0Ohdj_ZI",
-    "user2": "1uHvsf5JYcy9rNYzVWTkcZTvDASu6GsJK1IM3oHO-3HY",
+# ------------------ Multi-User: User Data (username → sheet + display name) ------------------
+USER_DATA = {
+    "sithara": {
+        "sheet_id": "1Swlnc6pMFhHlPXyHPs0s_scBJF--wwj6V6D0Ohdj_ZI",
+        "display_title": "හවුපේ උතුර 175/B",
+        "password": "sithara2026"
+    },
+    "shiwantha": {
+        "sheet_id": "1uHvsf5JYcy9rNYzVWTkcZTvDASu6GsJK1IM3oHO-3HY",
+        "display_title": "කුරුණෑගල 25/3",
+        "password": "shiwantha2026"
+    },
+    # තව users ඕන නම් මෙහෙම එකතු කරන්න
+    # "user3": {"sheet_id": "...", "display_title": "...", "password": "..."}
 }
 
 # ------------------ Login ------------------
@@ -24,10 +34,10 @@ if 'logged_in' not in st.session_state:
 
 if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
-    username = st.text_input("Username", placeholder="user1 හෝ user2")
+    username = st.text_input("Username", placeholder="sithara හෝ shiwantha")
     password = st.text_input("Password", type="password")
     if st.button("Login"):
-        if username in USER_SHEETS and password == "gnnegombo2025":
+        if username in USER_DATA and password == USER_DATA[username]["password"]:
             st.session_state.logged_in = True
             st.session_state.username = username
             st.success(f"Login සාර්ථකයි! Welcome {username}")
@@ -36,13 +46,12 @@ if not st.session_state.logged_in:
             st.error("වැරදි username හෝ password!")
     st.stop()
 
-# Logged in user එකට එක sheet එකක්
-SHEET_ID = USER_SHEETS.get(st.session_state.username)
-if not SHEET_ID:
-    st.error("User එකට sheet එකක් assign කරලා නැහැ.")
-    st.stop()
+# Logged in user එකට sheet එක + title එක assign කරනවා
+user_info = USER_DATA[st.session_state.username]
+SHEET_ID = user_info["sheet_id"]
+DISPLAY_TITLE = user_info["display_title"]
 
-# User-specific sheet (cache නොකරලා)
+# User-specific sheet
 def get_user_sheet():
     creds = get_creds()
     client = gspread.authorize(creds)
@@ -50,12 +59,12 @@ def get_user_sheet():
 
 worksheet = get_user_sheet()
 
-# ------------------ Title ------------------
-st.markdown(f"<h2 style='color: navy;'>හවුපේ උතුර 175/B - {st.session_state.username}</h2>", unsafe_allow_html=True)
+# ------------------ Title (user-specific) ------------------
+st.markdown(f"<h2 style='color: navy;'>{st.session_state.username} - {DISPLAY_TITLE}</h2>", unsafe_allow_html=True)
 st.markdown("<h1 style='color: navy;'>ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම</h1>", unsafe_allow_html=True)
 
 # ------------------ Dashboard ------------------
-@st.cache_data(ttl=1)  # Quick reload for multi-user
+@st.cache_data(ttl=5)
 def load_data():
     data = worksheet.get_all_values()
     if len(data) > 0:
@@ -153,7 +162,7 @@ if submitted:
                 timestamp
             ]
             worksheet.append_row(new_row)
-            st.success(f"සාර්ථකයි! {name} එකතු වුණා ✓ (Sheet: {SHEET_ID})")
+            st.success(f"සාර්ථකයි! {name} එකතු වුණා ✓")
             st.balloons()
             st.rerun()
         except Exception as e:
