@@ -11,7 +11,7 @@ def get_creds():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     return Credentials.from_service_account_info(creds_dict, scopes=scopes)
 
-# ------------------ Multi-User: User Data (username → sheet + display name) ------------------
+# ------------------ Multi-User: User Data ------------------
 USER_DATA = {
     "sithara": {
         "sheet_id": "1Swlnc6pMFhHlPXyHPs0s_scBJF--wwj6V6D0Ohdj_ZI",
@@ -23,8 +23,6 @@ USER_DATA = {
         "display_title": "කුරුණෑගල 25/3",
         "password": "shiwantha2026"
     },
-    # තව users ඕන නම් මෙහෙම එකතු කරන්න
-    # "user3": {"sheet_id": "...", "display_title": "...", "password": "..."}
 }
 
 # ------------------ Login ------------------
@@ -34,7 +32,7 @@ if 'logged_in' not in st.session_state:
 
 if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
-    username = st.text_input("Username", placeholder="Enter Username")
+    username = st.text_input("Username", placeholder="sithara හෝ shiwantha")
     password = st.text_input("Password", type="password")
     if st.button("Login"):
         if username in USER_DATA and password == USER_DATA[username]["password"]:
@@ -46,7 +44,15 @@ if not st.session_state.logged_in:
             st.error("වැරදි username හෝ password!")
     st.stop()
 
-# Logged in user එකට sheet එක + title එක assign කරනවා
+# Logout button (logged in වෙලා තියෙනකොට පේන්නේ)
+if st.session_state.logged_in:
+    if st.button("Logout", key="logout_btn"):
+        st.session_state.logged_in = False
+        st.session_state.username = None
+        st.success("Logout වුණා!")
+        st.rerun()
+
+# Logged in user එකට sheet එක + title එක
 user_info = USER_DATA[st.session_state.username]
 SHEET_ID = user_info["sheet_id"]
 DISPLAY_TITLE = user_info["display_title"]
@@ -59,7 +65,7 @@ def get_user_sheet():
 
 worksheet = get_user_sheet()
 
-# ------------------ Title (user-specific) ------------------
+# ------------------ Title ------------------
 st.markdown(f"<h2 style='color: navy;'>{st.session_state.username} - {DISPLAY_TITLE}</h2>", unsafe_allow_html=True)
 st.markdown("<h1 style='color: navy;'>ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම</h1>", unsafe_allow_html=True)
 
@@ -186,5 +192,3 @@ if st.button("සෙවීම"):
                 st.info("කිසිම results නැහැ.")
     except Exception as e:
         st.error(f"සෙවීමේදී ගැටලුවක්: {e}")
-
-
