@@ -186,3 +186,4 @@ if st.button("සෙවීම"):
                 st.info("කිසිම results නැහැ.")
     except Exception as e:
         st.error(f"සෙවීමේදී ගැටලුවක්: {e}")
+
