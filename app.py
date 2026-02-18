@@ -34,7 +34,7 @@ if 'logged_in' not in st.session_state:
 
 if not st.session_state.logged_in:
     st.title("GN Data Entry - Login")
-    username = st.text_input("Username", placeholder="sithara හෝ shiwantha")
+    username = st.text_input("Username", placeholder="Enter Username")
     password = st.text_input("Password", type="password")
     if st.button("Login"):
         if username in USER_DATA and password == USER_DATA[username]["password"]:
@@ -186,4 +186,5 @@ if st.button("සෙවීම"):
                 st.info("කිසිම results නැහැ.")
     except Exception as e:
         st.error(f"සෙවීමේදී ගැටලුවක්: {e}")
+
 
