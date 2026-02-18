@@ -4,19 +4,17 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime, date
 import pandas as pd
 
-# ------------------ Google Sheets Credentials (common for all users) ------------------
+# ------------------ Google Sheets Credentials ------------------
 @st.cache_resource
 def get_creds():
     creds_dict = dict(st.secrets["GOOGLE_CREDENTIALS"])
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     return Credentials.from_service_account_info(creds_dict, scopes=scopes)
 
-# ------------------ Multi-User: User to Sheet Mapping ------------------
+# ------------------ User to Sheet Mapping ------------------
 USER_SHEETS = {
     "user1": "1Swlnc6pMFhHlPXyHPs0s_scBJF--wwj6V6D0Ohdj_ZI",
     "user2": "1uHvsf5JYcy9rNYzVWTkcZTvDASu6GsJK1IM3oHO-3HY",
-    # ඔයාට තව users ඕන නම් මෙතනට එකතු කරන්න
-    # උදා: "dilip": "1itCCxoIfEWWroY5c3ukjLho9B1V0QM6WwR-6Z2rMORE",
 }
 
 # ------------------ Login ------------------
@@ -38,14 +36,13 @@ if not st.session_state.logged_in:
             st.error("වැරදි username හෝ password!")
     st.stop()
 
-# Logged in user එකට එක sheet එකක් assign කරනවා
+# Logged in user එකට එක sheet එකක්
 SHEET_ID = USER_SHEETS.get(st.session_state.username)
 if not SHEET_ID:
-    st.error("User එකට sheet එකක් assign කරලා නැහැ. Admin එක්ක කතා කරන්න.")
+    st.error("User එකට sheet එකක් assign කරලා නැහැ.")
     st.stop()
 
-# User එකට එක sheet එක open කරනවා
-@st.cache_resource
+# User-specific sheet (cache නොකරලා)
 def get_user_sheet():
     creds = get_creds()
     client = gspread.authorize(creds)
@@ -58,7 +55,7 @@ st.markdown(f"<h2 style='color: navy;'>හවුපේ උතුර 175/B - {st.
 st.markdown("<h1 style='color: navy;'>ග්‍රාම නිලධාරි දත්ත ඇතුලත් කිරීම</h1>", unsafe_allow_html=True)
 
 # ------------------ Dashboard ------------------
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=1)  # Quick reload for multi-user
 def load_data():
     data = worksheet.get_all_values()
     if len(data) > 0:
